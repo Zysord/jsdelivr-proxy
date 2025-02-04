@@ -1,0 +1,1542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CDN 代理服务 - 管理面板</title>
+    <!-- 优先使用SVG -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <!-- 降级使用ICO -->
+    <link rel="alternate icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://registry.npmmirror.com/bootstrap/5.3.3/files/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://registry.npmmirror.com/@fortawesome/fontawesome-free/6.7.2/files/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --border-color: #dee2e6;
+            --sidebar-bg: #f8f9fa;
+            --sidebar-active: #e9ecef;
+        }
+
+        body {
+            background-color: #f8f9fa;
+            padding-top: 56px;
+        }
+
+        /* 移动端导航栏样式 */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                left: -100%;
+                width: 80%;
+                max-width: 300px;
+                height: calc(100vh - 56px);
+                z-index: 1030;
+                transition: left 0.3s ease;
+                background-color: var(--sidebar-bg);
+                overflow-y: auto;
+            }
+
+            .sidebar.show {
+                left: 0;
+            }
+
+            .content-wrapper {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+
+            .navbar-brand {
+                font-size: 1rem;
+            }
+
+            .card {
+                margin-bottom: 1rem;
+            }
+
+            .btn-group-sm > .btn {
+                padding: 0.25rem 0.5rem;
+            }
+
+            .table-responsive {
+                margin-bottom: 1rem;
+            }
+        }
+
+        /* 桌面端样式 */
+        @media (min-width: 769px) {
+            .sidebar {
+                position: fixed;
+                top: 56px;
+                bottom: 0;
+                left: 0;
+                width: 250px;
+                padding-top: 1rem; 
+                overflow-y: auto;
+                background-color: var(--sidebar-bg);
+                border-right: 1px solid var(--border-color);
+                z-index: 1020; /* 确保侧边栏在上层 */
+            }
+
+            .content-wrapper {
+                margin-left: 250px; /* 与侧边栏宽度相同 */
+                padding: 1rem;
+                min-height: calc(100vh - 56px); /* 考虑顶部导航栏高度 */
+                width: calc(100% - 250px); /* 确保不会超出右侧 */
+            }
+
+            /* 添加内容区域的滚动控制 */
+            .content-section {
+                height: 100%;
+                overflow-y: auto;
+                position: relative;
+            }
+        }
+
+        .navbar {
+            background-color: #fff !important;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .nav-link {
+            color: #333;
+            opacity: 0.75;
+            transition: all 0.3s ease;
+            padding: 0.5rem 1rem;
+            border-radius: 0.25rem;
+            margin-bottom: 0.25rem;
+            cursor: pointer;
+            user-select: none;
+            text-decoration: none;
+        }
+        
+        .nav-link:hover {
+            color: #333;
+            opacity: 1;
+            background-color: var(--sidebar-active);
+            text-decoration: none;
+        }
+        
+        .nav-link.active {
+            color: #333;
+            opacity: 1;
+            background-color: var(--sidebar-active);
+            font-weight: 500;
+        }
+        
+        .toast-container {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1050;
+        }
+
+        .card {
+            background-color: #fff;
+            border-color: var(--border-color);
+            box-shadow: 0 2px 4px rgba(0,0,0,.05);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            border-color: var(--border-color);
+        }
+
+        .modal-header {
+            border-bottom-color: var(--border-color);
+        }
+
+        .modal-footer {
+            border-top-color: var(--border-color);
+        }
+
+        .form-control, .form-select {
+            border-color: var(--border-color);
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #0d6efd;
+        }
+
+        .btn-group-sm > .btn {
+            padding: .25rem .5rem;
+            font-size: .875rem;
+        }
+
+        .content-section {
+            padding: 1rem;
+        }
+
+        .status-badge {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .copy-btn {
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            padding: 0.25rem;
+        }
+
+        .copy-btn:hover {
+            opacity: 1;
+        }
+
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .card-body {
+                padding: 1rem;
+            }
+
+            .btn {
+                padding: 0.375rem 0.75rem;
+            }
+
+            .form-control, .form-select {
+                padding: 0.375rem 0.75rem;
+                font-size: 1rem;
+            }
+
+            .modal-dialog {
+                margin: 0.5rem;
+            }
+
+            .toast-container {
+                right: 10px;
+                left: 10px;
+                width: auto;
+            }
+
+            .nav-link {
+                padding: 0.75rem 1rem;
+                margin-bottom: 0.5rem;
+            }
+        }
+
+        /* 触摸优化 */
+        @media (hover: none) {
+            .nav-link:hover {
+                background-color: transparent;
+            }
+
+            .btn:hover {
+                transform: none;
+            }
+
+            .copy-btn {
+                padding: 0.5rem;
+            }
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 50%;
+            border-top-color: #0d6efd;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* 卡片悬停效果 */
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,.1);
+        }
+
+        /* 按钮动画 */
+        .btn {
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        /* 列表项动画 */
+        .list-group-item {
+            transition: background-color 0.2s ease;
+        }
+
+        .list-group-item:hover {
+            background-color: var(--sidebar-active);
+        }
+
+        /* 遮罩层样式 */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        #sidebarBackdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1025;
+            display: none;
+        }
+
+        #sidebarBackdrop.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- 登录模态框 -->
+    <div class="modal fade" id="loginModal" data-bs-backdrop="static" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">管理员登录</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">管理员密钥</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="adminKeyInput" placeholder="请输入管理员密钥">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('adminKeyInput')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" onclick="login()">
+                        <i class="fas fa-sign-in-alt me-1"></i> 登录
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast 容器 -->
+    <div class="toast-container"></div>
+
+    <!-- 顶部导航栏 -->
+    <nav class="navbar navbar-expand-md fixed-top">
+        <div class="container-fluid">
+            <button class="navbar-toggler border-0" type="button" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
+            <span class="navbar-brand">CDN 代理服务</span>
+            <div class="d-flex">
+                <button class="btn btn-outline-danger btn-sm" onclick="logout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="d-none d-md-inline ms-1">退出</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主容器 -->
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 修改侧边栏导航部分 -->
+            <nav class="sidebar" id="sidebar">
+                <div class="px-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a href="#" class="nav-link active" onclick="showSection('dashboard')">
+                                <i class="fas fa-tachometer-alt"></i> 仪表盘
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" onclick="showSection('whitelist-view')">
+                                <i class="fas fa-list"></i> 查看白名单
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" onclick="showSection('whitelist-add')">
+                                <i class="fas fa-plus"></i> 添加白名单
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" onclick="showSection('whitelist-edit')">
+                                <i class="fas fa-edit"></i> 编辑白名单
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" onclick="showSection('cache')">
+                                <i class="fas fa-database"></i> 缓存管理
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="#" class="nav-link" onclick="showSection('settings')">
+                                <i class="fas fa-cog"></i> 系统设置
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- 主要内容区域 -->
+            <main class="content-wrapper">
+                <!-- 仪表盘 -->
+                <div id="dashboard" class="content-section">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                        <h2 class="h4">仪表盘</h2>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="loadConfig()">
+                            <i class="fas fa-sync-alt"></i>
+                            <span class="d-none d-md-inline ms-1">刷新</span>
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-npm text-primary me-2"></i>
+                                        npm 包
+                                    </h5>
+                                    <p class="card-text display-6" id="npmCount">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-github text-dark me-2"></i>
+                                        GitHub 仓库
+                                    </h5>
+                                    <p class="card-text display-6" id="githubCount">-</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-wordpress text-primary me-2"></i>
+                                        WordPress 资源
+                                    </h5>
+                                    <p class="card-text display-6" id="wpCount">-</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mt-4">
+                        <div class="card-body">
+                            <h5 class="card-title">服务状态</h5>
+                            <div class="table-responsive">
+                                <table class="table table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>服务</th>
+                                            <th>状态</th>
+                                            <th>基础 URL</th>
+                                            <th>操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="serviceStatus">
+                                        <tr>
+                                            <td colspan="4" class="text-center">
+                                                <div class="loading"></div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 查看白名单 -->
+                <div id="whitelist-view" class="content-section d-none">
+                    <h2 class="h4 pb-2 mb-3 border-bottom">查看白名单</h2>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-npm text-primary me-2"></i>
+                                        npm 包
+                                    </h5>
+                                    <div class="list-group list-group-flush" id="viewNpmList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-github text-dark me-2"></i>
+                                        GitHub 仓库
+                                    </h5>
+                                    <div class="list-group list-group-flush" id="viewGithubList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-wordpress text-primary me-2"></i>
+                                        WordPress 资源
+                                    </h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">插件</h6>
+                                    <div class="list-group list-group-flush mb-3" id="viewWpPluginsList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                    <h6 class="card-subtitle mb-2 text-muted">主题</h6>
+                                    <div class="list-group list-group-flush" id="viewWpThemesList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 添加白名单 -->
+                <div id="whitelist-add" class="content-section d-none">
+                    <h2 class="h4 pb-2 mb-3 border-bottom">添加白名单</h2>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">资源类型</label>
+                                        <select class="form-select" id="addItemType">
+                                            <option value="npm">npm 包</option>
+                                            <option value="github">GitHub 仓库</option>
+                                            <option value="wordpress-plugin">WordPress 插件</option>
+                                            <option value="wordpress-theme">WordPress 主题</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">资源名称</label>
+                                        <input type="text" class="form-control" id="addItemValue" placeholder="输入资源名称">
+                                        <div class="form-text" id="addItemHelp"></div>
+                                    </div>
+                                    <button class="btn btn-primary" onclick="addWhitelistItem()">
+                                        <i class="fas fa-plus me-1"></i> 添加
+                                    </button>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="fas fa-info-circle me-1"></i> 格式说明
+                                            </h6>
+                                            <ul class="mb-0">
+                                                <li>npm：包名或 @作用域/包名</li>
+                                                <li>GitHub：用户名/仓库名</li>
+                                                <li>WordPress：插件或主题的 slug</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 编辑白名单 -->
+                <div id="whitelist-edit" class="content-section d-none">
+                    <h2 class="h4 pb-2 mb-3 border-bottom">编辑白名单</h2>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-npm text-primary me-2"></i>
+                                        npm 包
+                                    </h5>
+                                    <div class="list-group list-group-flush" id="editNpmList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-github text-dark me-2"></i>
+                                        GitHub 仓库
+                                    </h5>
+                                    <div class="list-group list-group-flush" id="editGithubList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title">
+                                        <i class="fab fa-wordpress text-primary me-2"></i>
+                                        WordPress 资源
+                                    </h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">插件</h6>
+                                    <div class="list-group list-group-flush mb-3" id="editWpPluginsList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                    <h6 class="card-subtitle mb-2 text-muted">主题</h6>
+                                    <div class="list-group list-group-flush" id="editWpThemesList">
+                                        <div class="text-center py-3">
+                                            <div class="loading"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 缓存管理 -->
+                <div id="cache" class="content-section d-none">
+                    <h2 class="h4 pb-2 mb-3 border-bottom">缓存管理</h2>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" id="cacheEnabled">
+                                        <label class="form-check-label">启用缓存</label>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">缓存时间（小时）</label>
+                                        <input type="number" class="form-control" id="cacheDuration" min="1">
+                                    </div>
+                                    <div class="btn-group">
+                                        <button class="btn btn-primary" onclick="saveCacheSettings()">
+                                            <i class="fas fa-save me-1"></i> 保存设置
+                                        </button>
+                                        <button class="btn btn-danger" onclick="clearCache()">
+                                            <i class="fas fa-trash me-1"></i> 清除缓存
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="card">
+                                        <div class="card-body">
+                                            <h6 class="card-title">
+                                                <i class="fas fa-chart-bar me-1"></i> 缓存统计
+                                            </h6>
+                                            <p class="mb-2">总大小：<span id="cacheSize">加载中...</span></p>
+                                            <p class="mb-0">项目数：<span id="cacheItems">加载中...</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系统设置 -->
+                <div id="settings" class="content-section d-none">
+                    <h2 class="h4 pb-2 mb-3 border-bottom">系统设置</h2>
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">管理员密钥</label>
+                                <div class="input-group">
+                                    <input type="password" class="form-control" id="adminKey" placeholder="留空保持当前密钥">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('adminKey')">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                                <div class="form-text">仅在需要更改密钥时填写</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">端口</label>
+                                <input type="number" class="form-control" id="port" min="1" max="65535">
+                                <div class="form-text">更改端口需要重启服务器</div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveSettings()">
+                                <i class="fas fa-save me-1"></i> 保存设置
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- 编辑项目模态框 -->
+    <div class="modal fade" id="editItemModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">编辑项目</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editItemType">
+                    <input type="hidden" id="editItemOldValue">
+                    <div class="mb-3">
+                        <label class="form-label">资源名称</label>
+                        <input type="text" class="form-control" id="editItemValue">
+                        <div class="form-text" id="editItemHelp"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEditItem()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 遮罩层 -->
+    <div class="modal-backdrop fade" id="sidebarBackdrop" style="display: none;"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 全局变量
+        const API_BASE = '/api/admin';
+        let config = {};
+        let adminKey = '';
+
+        // Toast 通知函数
+        function showToast(message, type = 'success') {
+            const toastHtml = `
+                <div class="toast" role="alert">
+                    <div class="toast-header ${type === 'error' ? 'bg-danger text-white' : 'bg-success text-white'}">
+                        <strong class="me-auto">${type === 'error' ? '错误' : '成功'}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">${message}</div>
+                </div>
+            `;
+            const toastContainer = document.querySelector('.toast-container');
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = toastContainer.lastElementChild;
+            const toast = new bootstrap.Toast(toastElement, { delay: 3000 });
+            toast.show();
+            toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
+        }
+
+        // 切换密码可见性
+        function togglePasswordVisibility(inputId) {
+            const input = document.getElementById(inputId);
+            const button = input.nextElementSibling;
+            const icon = button.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.className = 'fas fa-eye-slash';
+            } else {
+                input.type = 'password';
+                icon.className = 'fas fa-eye';
+            }
+        }
+
+        // 切换侧边栏
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            
+            if (sidebar.classList.contains('show')) {
+                closeSidebar();
+            } else {
+                sidebar.classList.add('show');
+                backdrop.style.display = 'block';
+                setTimeout(() => backdrop.classList.add('show'), 0);
+            }
+        }
+
+        // 关闭侧边栏
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            
+            sidebar.classList.remove('show');
+            backdrop.classList.remove('show');
+            setTimeout(() => backdrop.style.display = 'none', 150);
+        }
+
+        // 登录函数
+        async function login() {
+            const key = document.getElementById('adminKeyInput').value.trim();
+            if (!key) {
+                showToast('请输入管理员密钥', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/verify`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Admin-Key': key,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    adminKey = key;
+                    localStorage.setItem('adminKey', key);
+                    bootstrap.Modal.getInstance(document.getElementById('loginModal')).hide();
+                    loadConfig();
+                    showToast('登录成功');
+                } else {
+                    showToast(data.message || '管理员密钥无效', 'error');
+                    document.getElementById('adminKeyInput').value = '';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showToast('登录失败: ' + error.message, 'error');
+            }
+        }
+
+        // 登出函数
+        function logout() {
+            if (confirm('确定要退出吗？')) {
+                localStorage.removeItem('adminKey');
+                adminKey = '';
+                clearPageData();
+                const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                loginModal.show();
+                showToast('已退出登录');
+            }
+        }
+
+        // 清除页面数据
+        function clearPageData() {
+            document.getElementById('npmCount').textContent = '-';
+            document.getElementById('githubCount').textContent = '-';
+            document.getElementById('wpCount').textContent = '-';
+            document.getElementById('serviceStatus').innerHTML = '';
+            document.getElementById('viewNpmList').innerHTML = '';
+            document.getElementById('viewGithubList').innerHTML = '';
+            document.getElementById('viewWpPluginsList').innerHTML = '';
+            document.getElementById('viewWpThemesList').innerHTML = '';
+            document.getElementById('editNpmList').innerHTML = '';
+            document.getElementById('editGithubList').innerHTML = '';
+            document.getElementById('editWpPluginsList').innerHTML = '';
+            document.getElementById('editWpThemesList').innerHTML = '';
+            document.getElementById('cacheSize').textContent = '-';
+            document.getElementById('cacheItems').textContent = '-';
+            document.getElementById('cacheEnabled').checked = false;
+            document.getElementById('cacheDuration').value = '';
+            document.getElementById('port').value = '';
+            document.getElementById('adminKey').value = '';
+            document.getElementById('addItemValue').value = '';
+        }
+
+        // 检查登录状态
+        async function checkLogin() {
+            const storedKey = localStorage.getItem('adminKey');
+            if (storedKey) {
+                try {
+                    const response = await fetch(`${API_BASE}/verify`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Admin-Key': storedKey,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        adminKey = storedKey;
+                        loadConfig();
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Check login error:', error);
+                }
+            }
+            
+            localStorage.removeItem('adminKey');
+            adminKey = '';
+            const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+            loginModal.show();
+        }
+        // 加载配置
+        async function loadConfig() {
+            try {
+                const response = await fetch(`${API_BASE}/config`, {
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+
+                if (response.status === 403) {
+                    localStorage.removeItem('adminKey');
+                    const loginModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                    loginModal.show();
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Failed to load config');
+                }
+
+                config = await response.json();
+                updateDashboard();
+                updateViewWhitelist();
+                updateEditWhitelist();
+                updateCacheSettings();
+                updateSettings();
+                loadCacheStats();
+            } catch (error) {
+                console.error('Error loading config:', error);
+                showToast('加载配置失败', 'error');
+            }
+        }
+
+        // 更新仪表盘
+        function updateDashboard() {
+            document.getElementById('npmCount').textContent = config.jsdelivr.whitelist.npm.length;
+            document.getElementById('githubCount').textContent = config.jsdelivr.whitelist.github.length;
+            document.getElementById('wpCount').textContent = 
+                config.jsdelivr.whitelist.wordpress.plugins.length + 
+                config.jsdelivr.whitelist.wordpress.themes.length;
+
+            const serviceStatus = document.getElementById('serviceStatus');
+            serviceStatus.innerHTML = '';
+
+            const services = [
+                { name: 'npm', url: config.jsdelivr.npm_base, icon: 'fab fa-npm text-primary' },
+                { name: 'GitHub', url: config.jsdelivr.github_base, icon: 'fab fa-github' },
+                { name: 'WordPress', url: config.jsdelivr.wordpress_base, icon: 'fab fa-wordpress text-primary' }
+            ];
+
+            services.forEach(service => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>
+                        <i class="${service.icon} me-2"></i>
+                        ${service.name}
+                    </td>
+                    <td><span class="badge bg-success rounded-pill">正常</span></td>
+                    <td class="text-break">${service.url}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="copyToClipboard('${service.url}')" title="复制 URL">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </td>
+                `;
+                serviceStatus.appendChild(row);
+            });
+        }
+
+        // 更新查看白名单页面
+        function updateViewWhitelist() {
+            // npm packages
+            const npmList = document.getElementById('viewNpmList');
+            npmList.innerHTML = config.jsdelivr.whitelist.npm.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.npm.forEach(pkg => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <i class="fab fa-npm text-primary me-2"></i>
+                    <span class="text-break">${pkg}</span>
+                `;
+                npmList.appendChild(li);
+            });
+
+            // GitHub repos
+            const githubList = document.getElementById('viewGithubList');
+            githubList.innerHTML = config.jsdelivr.whitelist.github.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.github.forEach(repo => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <i class="fab fa-github me-2"></i>
+                    <span class="text-break">${repo}</span>
+                `;
+                githubList.appendChild(li);
+            });
+
+            // WordPress plugins
+            const pluginsList = document.getElementById('viewWpPluginsList');
+            pluginsList.innerHTML = config.jsdelivr.whitelist.wordpress.plugins.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.wordpress.plugins.forEach(plugin => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <i class="fas fa-plug me-2"></i>
+                    <span class="text-break">${plugin}</span>
+                `;
+                pluginsList.appendChild(li);
+            });
+
+            // WordPress themes
+            const themesList = document.getElementById('viewWpThemesList');
+            themesList.innerHTML = config.jsdelivr.whitelist.wordpress.themes.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.wordpress.themes.forEach(theme => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <i class="fas fa-paint-brush me-2"></i>
+                    <span class="text-break">${theme}</span>
+                `;
+                themesList.appendChild(li);
+            });
+        }
+
+        // 更新编辑白名单页面
+        function updateEditWhitelist() {
+            // npm packages
+            const npmList = document.getElementById('editNpmList');
+            npmList.innerHTML = config.jsdelivr.whitelist.npm.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.npm.forEach(pkg => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-break me-2">
+                            <i class="fab fa-npm text-primary me-2"></i>
+                            ${pkg}
+                        </span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editItem('npm', '${pkg}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="removeItem('npm', '${pkg}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                npmList.appendChild(li);
+            });
+
+            // GitHub repos
+            const githubList = document.getElementById('editGithubList');
+            githubList.innerHTML = config.jsdelivr.whitelist.github.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.github.forEach(repo => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-break me-2">
+                            <i class="fab fa-github me-2"></i>
+                            ${repo}
+                        </span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editItem('github', '${repo}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="removeItem('github', '${repo}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                githubList.appendChild(li);
+            });
+
+            // WordPress plugins
+            const pluginsList = document.getElementById('editWpPluginsList');
+            pluginsList.innerHTML = config.jsdelivr.whitelist.wordpress.plugins.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.wordpress.plugins.forEach(plugin => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-break me-2">
+                            <i class="fas fa-plug me-2"></i>
+                            ${plugin}
+                        </span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editItem('wordpress-plugin', '${plugin}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="removeItem('wordpress-plugin', '${plugin}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                pluginsList.appendChild(li);
+            });
+
+            // WordPress themes
+            const themesList = document.getElementById('editWpThemesList');
+            themesList.innerHTML = config.jsdelivr.whitelist.wordpress.themes.length ? '' : '<div class="text-center text-muted py-3">暂无数据</div>';
+            config.jsdelivr.whitelist.wordpress.themes.forEach(theme => {
+                const li = document.createElement('div');
+                li.className = 'list-group-item';
+                li.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-break me-2">
+                            <i class="fas fa-paint-brush me-2"></i>
+                            ${theme}
+                        </span>
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-outline-primary" onclick="editItem('wordpress-theme', '${theme}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-outline-danger" onclick="removeItem('wordpress-theme', '${theme}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                themesList.appendChild(li);
+            });
+        }
+
+        // 更新缓存设置
+        function updateCacheSettings() {
+            document.getElementById('cacheEnabled').checked = config.cache.enabled;
+            document.getElementById('cacheDuration').value = config.cache.duration / (60 * 60);
+        }
+
+        // 更新设置
+        function updateSettings() {
+            document.getElementById('port').value = config.port || 3000;
+        }
+
+        // 加载缓存统计信息
+        async function loadCacheStats() {
+            try {
+                const response = await fetch(`${API_BASE}/cache/stats`, {
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to load cache stats');
+
+                const stats = await response.json();
+                document.getElementById('cacheSize').textContent = stats.totalSize;
+                document.getElementById('cacheItems').textContent = stats.itemCount;
+            } catch (error) {
+                console.error('Error loading cache stats:', error);
+                showToast('加载缓存统计失败', 'error');
+            }
+        }
+
+        // 验证输入
+        function validateInput(type, value) {
+            switch (type) {
+                case 'npm':
+                    return /^[@a-zA-Z0-9-_\/]+$/.test(value);
+                case 'github':
+                    return /^[a-zA-Z0-9-_]+\/[a-zA-Z0-9-_\.]+$/.test(value);
+                case 'wordpress-plugin':
+                case 'wordpress-theme':
+                    return /^[a-zA-Z0-9-_]+$/.test(value);
+                default:
+                    return false;
+            }
+        }
+
+        // 添加白名单项目
+        async function addWhitelistItem() {
+            const type = document.getElementById('addItemType').value;
+            const value = document.getElementById('addItemValue').value.trim();
+
+            if (!value) {
+                showToast('请输入资源名称', 'error');
+                return;
+            }
+
+            if (!validateInput(type, value)) {
+                showToast('资源名称格式无效', 'error');
+                return;
+            }
+
+            try {
+                let endpoint;
+                let body;
+
+                switch (type) {
+                    case 'npm':
+                        endpoint = 'npm';
+                        body = {
+                            items: [...config.jsdelivr.whitelist.npm, value]
+                        };
+                        break;
+                    case 'github':
+                        endpoint = 'github';
+                        body = {
+                            items: [...config.jsdelivr.whitelist.github, value]
+                        };
+                        break;
+                    case 'wordpress-plugin':
+                        endpoint = 'wordpress';
+                        body = {
+                            type: 'plugins',
+                            items: [...config.jsdelivr.whitelist.wordpress.plugins, value]
+                        };
+                        break;
+                    case 'wordpress-theme':
+                        endpoint = 'wordpress';
+                        body = {
+                            type: 'themes',
+                            items: [...config.jsdelivr.whitelist.wordpress.themes, value]
+                        };
+                        break;
+                }
+
+                const response = await fetch(`${API_BASE}/whitelist/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) throw new Error('Failed to add item');
+
+                document.getElementById('addItemValue').value = '';
+                loadConfig();
+                showToast('添加成功');
+            } catch (error) {
+                console.error('Error adding item:', error);
+                showToast('添加失败', 'error');
+            }
+        }
+        // 编辑项目
+        function editItem(type, value) {
+            document.getElementById('editItemType').value = type;
+            document.getElementById('editItemOldValue').value = value;
+            document.getElementById('editItemValue').value = value;
+            
+            // 设置帮助文本
+            const helpText = document.getElementById('editItemHelp');
+            switch (type) {
+                case 'npm':
+                    helpText.textContent = '格式：包名或 @作用域/包名';
+                    break;
+                case 'github':
+                    helpText.textContent = '格式：用户名/仓库名';
+                    break;
+                case 'wordpress-plugin':
+                case 'wordpress-theme':
+                    helpText.textContent = '格式：资源的 slug';
+                    break;
+            }
+            
+            const modal = new bootstrap.Modal(document.getElementById('editItemModal'));
+            modal.show();
+        }
+
+        // 保存编辑项目
+        async function saveEditItem() {
+            const type = document.getElementById('editItemType').value;
+            const oldValue = document.getElementById('editItemOldValue').value;
+            const newValue = document.getElementById('editItemValue').value.trim();
+
+            if (!newValue) {
+                showToast('请输入资源名称', 'error');
+                return;
+            }
+
+            if (!validateInput(type, newValue)) {
+                showToast('资源名称格式无效', 'error');
+                return;
+            }
+
+            try {
+                let endpoint;
+                let body;
+
+                switch (type) {
+                    case 'npm':
+                        endpoint = 'npm';
+                        body = {
+                            items: config.jsdelivr.whitelist.npm.map(p => p === oldValue ? newValue : p)
+                        };
+                        break;
+                    case 'github':
+                        endpoint = 'github';
+                        body = {
+                            items: config.jsdelivr.whitelist.github.map(r => r === oldValue ? newValue : r)
+                        };
+                        break;
+                    case 'wordpress-plugin':
+                        endpoint = 'wordpress';
+                        body = {
+                            type: 'plugins',
+                            items: config.jsdelivr.whitelist.wordpress.plugins.map(p => p === oldValue ? newValue : p)
+                        };
+                        break;
+                    case 'wordpress-theme':
+                        endpoint = 'wordpress';
+                        body = {
+                            type: 'themes',
+                            items: config.jsdelivr.whitelist.wordpress.themes.map(t => t === oldValue ? newValue : t)
+                        };
+                        break;
+                }
+
+                const response = await fetch(`${API_BASE}/whitelist/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) throw new Error('Failed to update item');
+
+                bootstrap.Modal.getInstance(document.getElementById('editItemModal')).hide();
+                loadConfig();
+                showToast('更新成功');
+            } catch (error) {
+                console.error('Error updating item:', error);
+                showToast('更新失败', 'error');
+            }
+        }
+
+        // 删除项目
+        async function removeItem(type, value) {
+            if (!confirm(`确定要删除 "${value}" 吗？`)) {
+                return;
+            }
+
+            try {
+                let endpoint;
+                let body;
+
+                switch (type) {
+                    case 'npm':
+                        endpoint = 'npm';
+                        body = {
+                            items: config.jsdelivr.whitelist.npm.filter(p => p !== value)
+                        };
+                        break;
+                    case 'github':
+                        endpoint = 'github';
+                        body = {
+                            items: config.jsdelivr.whitelist.github.filter(r => r !== value)
+                        };
+                        break;
+                    case 'wordpress-plugin':
+                        endpoint = 'wordpress';
+                        body = {
+                            type: 'plugins',
+                            items: config.jsdelivr.whitelist.wordpress.plugins.filter(p => p !== value)
+                        };
+                        break;
+                    case 'wordpress-theme':
+                        endpoint = 'wordpress';
+                        body = {
+                            type: 'themes',
+                            items: config.jsdelivr.whitelist.wordpress.themes.filter(t => t !== value)
+                        };
+                        break;
+                }
+
+                const response = await fetch(`${API_BASE}/whitelist/${endpoint}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify(body)
+                });
+
+                if (!response.ok) throw new Error('Failed to remove item');
+
+                loadConfig();
+                showToast('删除成功');
+            } catch (error) {
+                console.error('Error removing item:', error);
+                showToast('删除失败', 'error');
+            }
+        }
+
+        // 保存缓存设置
+        async function saveCacheSettings() {
+            const enabled = document.getElementById('cacheEnabled').checked;
+            const duration = document.getElementById('cacheDuration').value * 60 * 60;
+
+            try {
+                const response = await fetch(`${API_BASE}/cache`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify({ enabled, duration })
+                });
+
+                if (!response.ok) throw new Error('Failed to save cache settings');
+
+                loadConfig();
+                showToast('缓存设置已保存');
+            } catch (error) {
+                console.error('Error saving cache settings:', error);
+                showToast('保存缓存设置失败', 'error');
+            }
+        }
+
+        // 清除缓存
+        async function clearCache() {
+            if (!confirm('确定要清除所有缓存吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/cache/clear`, {
+                    method: 'POST',
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to clear cache');
+
+                loadConfig();
+                showToast('缓存已清除');
+            } catch (error) {
+                console.error('Error clearing cache:', error);
+                showToast('清除缓存失败', 'error');
+            }
+        }
+
+        // 保存设置
+        async function saveSettings() {
+            const newAdminKey = document.getElementById('adminKey').value;
+            const port = document.getElementById('port').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/settings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify({
+                        adminKey: newAdminKey || undefined,
+                        port: parseInt(port) || 3000
+                    })
+                });
+
+                if (!response.ok) throw new Error('Failed to save settings');
+
+                const data = await response.json();
+
+                if (newAdminKey) {
+                    adminKey = newAdminKey;
+                    localStorage.setItem('adminKey', newAdminKey);
+                }
+
+                document.getElementById('adminKey').value = '';
+                loadConfig();
+                showToast('设置已保存' + (data.needsRestart ? '，需要重启服务器生效' : ''));
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showToast('保存设置失败', 'error');
+            }
+        }
+
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('已复制到剪贴板');
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                showToast('复制失败', 'error');
+            });
+        }
+
+        /// 显示指定部分
+        function showSection(sectionId) {
+            // 阻止默认事件
+            event.preventDefault();
+            
+            // 隐藏所有部分
+            document.querySelectorAll('.content-section').forEach(section => {
+                section.classList.add('d-none');
+            });
+            
+            // 显示选中部分
+            document.getElementById(sectionId).classList.remove('d-none');
+        
+            // 更新导航链接状态
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            const activeLink = document.querySelector(`.nav-link[onclick*="${sectionId}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+        
+            // 在移动端自动关闭侧边栏
+            if (window.innerWidth < 768) {
+                closeSidebar();
+            }
+        }
+
+        // 更新添加项目帮助文本
+        function updateAddItemHelp() {
+            const type = document.getElementById('addItemType').value;
+            const helpText = document.getElementById('addItemHelp');
+            switch (type) {
+                case 'npm':
+                    helpText.textContent = '示例：vue 或 @vue/cli';
+                    break;
+                case 'github':
+                    helpText.textContent = '示例：vuejs/vue';
+                    break;
+                case 'wordpress-plugin':
+                case 'wordpress-theme':
+                    helpText.textContent = '示例：woocommerce';
+                    break;
+            }
+        }
+
+        // 页面加载完成后执行
+        document.addEventListener('DOMContentLoaded', () => {
+            // 检查登录状态
+            checkLogin();
+
+            // 添加类型选择变化事件
+            document.getElementById('addItemType').addEventListener('change', updateAddItemHelp);
+            updateAddItemHelp();
+
+            // 按回车键登录
+            document.getElementById('adminKeyInput').addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    login();
+                }
+            });
+
+            // 添加项目的回车键支持
+            document.getElementById('addItemValue').addEventListener('keyup', (e) => {
+                if (e.key === 'Enter') {
+                    addWhitelistItem();
+                }
+            });
+
+            // 点击遮罩层关闭侧边栏
+            document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
+        });
+    </script>
+</body>
+</html>

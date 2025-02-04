@@ -1,0 +1,19 @@
+{
+  "name": "jsdelivr-proxy",
+  "version": "1.0.0",
+  "description": "A proxy service for jsDelivr CDN",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "dependencies": {
+    "axios": "^1.7.9",
+    "express": "^4.21.2",
+    "node-cache": "^5.1.2",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

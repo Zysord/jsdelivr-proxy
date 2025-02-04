@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>访问受限</title>
+    <!-- 优先使用SVG -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <!-- 降级使用ICO -->
+    <link rel="alternate icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://registry.npmmirror.com/bootstrap/5.1.3/files/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 100px auto;
+            padding: 20px;
+        }
+        .error-icon {
+            font-size: 48px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+        .error-message {
+            color: #6c757d;
+            margin-bottom: 30px;
+        }
+        .package-info {
+            background-color: #fff;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .package-name {
+            font-family: monospace;
+            background-color: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+        .help-text {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container text-center">
+            <div class="error-icon">⚠️</div>
+            <h1 class="error-title">访问受限</h1>
+            <div class="error-message">
+                抱歉，您请求的资源不在白名单中，无法访问。
+            </div>
+            <div class="package-info">
+                <p>请求的包：<span class="package-name">{{packageName}}</span></p>
+                <p>类型：<span class="package-type">{{packageType}}</span></p>
+            </div>
+            <div class="help-text">
+                <p>如果您需要访问此资源，请联系管理员将其添加到白名单中。</p>
+                <p>您也可以直接访问官方 CDN：<a href="{{officialUrl}}" target="_blank">{{officialUrl}}</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

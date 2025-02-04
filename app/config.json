@@ -1,0 +1,32 @@
+{
+  "port": 3000,
+  "adminKey": "admin",
+  "cache": {
+    "enabled": true,
+    "duration": 86400
+  },
+  "jsdelivr": {
+    "npm_base": "https://cdn.jsdelivr.net/npm",
+    "github_base": "https://cdn.jsdelivr.net/gh",
+    "wordpress_base": "https://cdn.jsdelivr.net/wp",
+    "whitelist": {
+      "npm": [
+        "react",
+        "vue"
+      ],
+      "github": [
+        "vuejs/vue"
+      ],
+      "wordpress": {
+        "plugins": [
+          "woocommerce",
+          "wp-slimstat"
+        ],
+        "themes": [
+          "woocommerce",
+          "twenty-eightteen"
+        ]
+      }
+    }
+  }
+}
