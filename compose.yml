@@ -4,6 +4,6 @@ services:
     ports:
       - "3000:3000"
     volumes:
-      - ${PWD}/app/cache:/app/cache
       - ${PWD}/app/config.json:/app/config.json
+      - ${PWD}/app/public:/app/public
     restart: unless-stopped
