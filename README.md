@@ -18,6 +18,9 @@
 # 克隆仓库
 git clone https://github.com/hmsjy2017/jsdelivr-proxy
 
+# 设置目录权限
+chown -R 1000:1000 app
+
 # 构建并启动容器
 docker compose up -d
 ```
