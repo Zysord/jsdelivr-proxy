@@ -10,6 +10,7 @@
   "dependencies": {
     "axios": "^1.7.9",
     "express": "^4.21.2",
+    "mustache": "^4.2.0",
     "node-cache": "^5.1.2",
     "node-fetch": "^3.3.2"
   },

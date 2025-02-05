@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{repoName}} - 文件列表</title>
+    <style>
+        :root {
+            --bg-color: #f6f8fa;
+            --text-color: #24292e;
+            --link-color: #0366d6;
+            --border-color: #eaecef;
+            --hover-bg: #f1f4f8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            line-height: 1.5;
+        }
+
+        .container {
+            background-color: white;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+            overflow: hidden;
+        }
+
+        .header {
+            padding: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+
+        .breadcrumb a {
+            color: var(--link-color);
+            text-decoration: none;
+        }
+
+        .separator {
+            margin: 0 8px;
+            color: #586069;
+        }
+
+        .repo-info {
+            display: flex;
+            align-items: center;
+            color: #586069;
+            font-size: 14px;
+        }
+
+        .repo-info {
+            margin-bottom: 0;
+            padding: 8px 12px;
+            background-color: #fffbdd;
+            border: 1px solid #ffe5b4;
+            border-radius: 4px;
+        }
+
+        .repo-info .icon {
+            margin-right: 8px;
+            color: #b08800;
+        }
+
+        .repo-info span {
+            font-size: 13px;
+            color: #735c0f;
+        }
+
+        .files-container {
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #9ca3af transparent;
+        }
+
+        .files-container::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .files-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .files-container::-webkit-scrollbar-thumb {
+            background-color: #9ca3af;
+            border-radius: 3px;
+        }
+
+        .file-list {
+            list-style: none;
+            min-width: fit-content;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s;
+            white-space: nowrap;
+        }
+
+        .file-item:last-child {
+            border-bottom: none;
+        }
+
+        .file-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .file-item a {
+            color: var(--link-color);
+            text-decoration: none;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            min-width: 80px;
+            flex-shrink: 0;
+            color: #586069;
+            font-size: 12px;
+            margin-left: 16px;
+        }
+
+        .size {
+            margin-left: 8px;
+        }
+
+        .icon:before {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+
+        .folder-icon:before {
+            content: "📁";
+            color: #79b8ff;
+        }
+
+        .file-icon:before {
+            content: "📄";
+            color: #959da5;
+        }
+
+        .loading {
+            display: none;
+            padding: 20px;
+            text-align: center;
+            color: #586069;
+        }
+
+        .error {
+            padding: 16px;
+            color: #cb2431;
+            background-color: #ffeef0;
+            border: 1px solid #ffeef0;
+            border-radius: 6px;
+            margin: 16px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .file-info {
+                min-width: auto;
+                margin-left: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="breadcrumb">
+                <a href="/gh/{{repoName}}/">{{repoName}}</a>
+                {{#currentPath}}
+                    {{#breadcrumbs}}
+                    <span class="separator">/</span>
+                    <a href="{{url}}">{{name}}</a>
+                    {{/breadcrumbs}}
+                    <span class="separator">/</span>
+                    <span>{{name}}</span>
+                {{/currentPath}}
+            </div>
+            <div class="repo-info" style="margin-bottom: 0;">
+                <span class="icon">📦</span>
+                <span>本仓库大小大于 50MB，通过 GitHub API 获取文件列表</span>
+            </div>
+        </div>
+
+        {{#error}}
+        <div class="error">{{message}}</div>
+        {{/error}}
+
+        <div class="files-container">
+            <ul class="file-list">
+                {{#parentDir}}
+                <li class="file-item">
+                    <a href="{{url}}">
+                        <span class="folder-icon icon"></span>
+                        <span>返回上级目录</span>
+                    </a>
+                </li>
+                {{/parentDir}}
+                {{#files}}
+                <li class="file-item">
+                    <a href="{{url}}">
+                        <span class="{{type}}-icon icon"></span>
+                        <span>{{name}}</span>
+                    </a>
+                    <div class="file-info">
+                        {{#size}}<span class="size">{{size}}</span>{{/size}}
+                    </div>
+                </li>
+                {{/files}}
+            </ul>
+        </div>
+        <div class="loading">加载中...</div>
+    </div>
+</body>
+</html>

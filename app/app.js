@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const util = require('util');
 const readFile = util.promisify(fs.readFile);
+const Mustache = require('mustache');
 
 // 配置文件路径
 const CONFIG_FILE = path.join(__dirname, 'config.json');
@@ -37,6 +38,17 @@ if (!fs.existsSync(configDir)) {
 const defaultConfig = {
     port: 3000,
     adminKey: 'admin', // 默认管理员密钥
+    cache: {
+        enabled: true,
+        duration: 24 * 60 * 60 // 24小时
+    },
+    github: {
+        token: '', // GitHub 个人访问令牌
+        apiCache: {
+            enabled: true,
+            duration: 300 // 5分钟
+        }
+    },
     jsdelivr: {
         npm_base: 'https://cdn.jsdelivr.net/npm',
         github_base: 'https://cdn.jsdelivr.net/gh',
@@ -49,10 +61,6 @@ const defaultConfig = {
                 themes: []
             }
         }
-    },
-    cache: {
-        enabled: true,
-        duration: 24 * 60 * 60 // 24小时
     }
 };
 
@@ -76,6 +84,7 @@ if (!fs.existsSync(CONFIG_FILE)) {
 
 // 缓存存储
 const cache = new Map();
+const apiCache = new Map();
 
 // 保存配置
 function saveConfig() {
@@ -140,6 +149,123 @@ async function getErrorPage(packageInfo) {
     } catch (error) {
         console.error('Error reading error template:', error);
         return '访问受限：请求的资源不在白名单中。';
+    }
+}
+
+// 添加获取 GitHub 仓库内容的函数
+async function getGitHubRepoContents(owner, repo, path = '') {
+    const cacheKey = `${owner}/${repo}/${path}`;
+    const cached = apiCache.get(cacheKey);
+    
+    if (config.github.apiCache.enabled && 
+        cached && 
+        Date.now() - cached.timestamp < config.github.apiCache.duration * 1000) {
+        return cached.data;
+    }
+
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    const headers = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'jsdelivr-proxy'
+    };
+    
+    // 修改 token 认证方式
+    if (config.github?.token) {
+        headers['Authorization'] = `token ${config.github.token}`;  // 改为 'token' 而不是 'Bearer'
+    }
+
+    console.log('Fetching GitHub contents:', apiUrl);
+    
+    try {
+        const response = await fetch(apiUrl, { headers });
+        
+        if (response.status === 403) {
+            const rateLimitRemaining = response.headers.get('x-ratelimit-remaining');
+            const rateLimitReset = response.headers.get('x-ratelimit-reset');
+            console.error('Rate limit info:', {
+                remaining: rateLimitRemaining,
+                resetTime: new Date(rateLimitReset * 1000).toLocaleString()
+            });
+        }
+        
+        if (!response.ok) {
+            const error = await response.text();
+            console.error('GitHub API error:', response.status, error);
+            throw new Error(`GitHub API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+
+        // 如果启用缓存则保存响应
+        if (config.github.apiCache.enabled) {
+            apiCache.set(cacheKey, {
+                data: data,
+                timestamp: Date.now()
+            });
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('Failed to fetch GitHub contents:', error);
+        throw error;
+    }
+}
+
+// 添加路径清理函数
+function cleanPath(path) {
+    return path.split('/')
+        .filter(Boolean)
+        .join('/');
+}
+
+// 添加文件大小格式化函数
+function formatSize(bytes) {
+    if (bytes === undefined) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+}
+
+async function getFileListPage(repoInfo, files) {
+    try {
+        const template = await readFile(path.join(__dirname, 'public/file-list.html'), 'utf8');
+        const currentPath = cleanPath(repoInfo.currentPath || '');
+        
+        // 获取当前路径的各部分
+        const pathParts = currentPath.split('/').filter(Boolean);
+        
+        // 生成面包屑导航，不包括当前目录
+        const breadcrumbs = pathParts.slice(0, -1).map((part, index) => ({
+            name: part,
+            url: `/gh/${repoInfo.name}/${pathParts.slice(0, index + 1).join('/')}`
+        }));
+
+        // 处理父目录链接
+        const parentDir = currentPath ? {
+            url: `/gh/${repoInfo.name}/${pathParts.slice(0, -1).join('/')}`
+        } : null;
+
+        return Mustache.render(template, {
+            repoName: repoInfo.name,
+            currentPath: currentPath ? {
+                fullPath: currentPath,
+                breadcrumbs: breadcrumbs, 
+                name: pathParts[pathParts.length - 1] || ''
+            } : null,
+            parentDir: parentDir,
+            files: files.map(file => ({
+                name: file.name,
+                url: file.type === 'dir' ? 
+                    `/gh/${repoInfo.name}/${cleanPath(`${currentPath}/${file.name}`)}` :
+                    `/gh/${repoInfo.name}/${cleanPath(`${currentPath}/${file.name}`)}`,
+                type: file.type === 'dir' ? 'folder' : 'file',
+                size: file.type === 'file' ? formatSize(file.size) : ''
+            }))
+        });
+    } catch (error) {
+        console.error('Error reading file list template:', error);
+        return '无法加载文件列表。';
     }
 }
 
@@ -302,6 +428,31 @@ app.post('/api/admin/settings', adminAuth, (req, res) => {
     }
 });
 
+app.post('/api/admin/github/token', adminAuth, (req, res) => {
+    const { token } = req.body;
+    config.github.token = token;
+    
+    if (saveConfig()) {
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: 'Failed to save GitHub token' });
+    }
+});
+
+app.post('/api/admin/github/cache', adminAuth, (req, res) => {
+    const { enabled, duration } = req.body;
+    
+    config.github.apiCache.enabled = enabled;
+    if (duration) config.github.apiCache.duration = duration;
+    
+    if (saveConfig()) {
+        if (!enabled) apiCache.clear();
+        res.json({ success: true });
+    } else {
+        res.status(500).json({ error: '保存配置失败' });
+    }
+});
+
 // 代理请求处理
 app.use(cacheMiddleware, async (req, res) => {
     const url = req.url;
@@ -362,13 +513,49 @@ app.use(cacheMiddleware, async (req, res) => {
         res.status(403).send(errorHtml);
         return;
     }
-
     try {
-        console.log('Proxying request to:', proxyUrl); // 添加日志
+        console.log('Proxying request to:', proxyUrl);
         const response = await fetch(proxyUrl);
+        
+        // 处理 GitHub 大文件仓库
+        if (packageType === 'github' && response.status === 403) {
+            const responseText = await response.text();
+            if (responseText.includes('Package size exceeded')) {
+                const [owner, repo] = packageName.split('/');
+                // 从URL中提取实际路径，移除版本号部分
+                const urlParts = url.split(`/gh/${packageName}/`);
+                let filePath = '';
+                if (urlParts.length > 1) {
+                    filePath = urlParts[1].split('@')[1] || urlParts[1];
+                }
+                filePath = cleanPath(filePath);
+
+                try {
+                    // 获取指定路径的仓库内容
+                    const contents = await getGitHubRepoContents(owner, repo, filePath);
+                    
+                    if (Array.isArray(contents)) {
+                        const html = await getFileListPage({
+                            name: packageName,
+                            currentPath: filePath
+                        }, contents);
+                        
+                        res.set('Content-Type', 'text/html');
+                        res.send(html);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('GitHub API error:', error);
+                    throw error;
+                }
+            }
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
+
         const contentType = response.headers.get('content-type');
         const data = Buffer.from(await response.arrayBuffer());
 
@@ -384,33 +571,24 @@ app.use(cacheMiddleware, async (req, res) => {
         res.send(data);
     } catch (error) {
         console.error('Proxy error:', error);
-        console.error('Request URL:', proxyUrl); // 添加错误日志
         const errorHtml = await get400ErrorPage();
         res.status(500).send(errorHtml);
-        return;
     }
 });
 
 // 错误处理中间件
 app.use(async (err, req, res, next) => {
     console.error('Error:', err);
-    
-    if (err.status === 400 || err.statusCode === 400) {
-        const errorHtml = await get400ErrorPage();
-        res.status(400).send(errorHtml);
-        return;
-    }
-    
-    res.status(500).json({ 
-        error: 'Internal server error',
-        message: err.message 
-    });
+    const errorHtml = await get400ErrorPage();
+    res.status(500).send(errorHtml);
 });
 
 // 启动服务器
 const server = app.listen(config.port, () => {
-    console.log(`Server running on port ${config.port}`);
+    console.log(`Server is running on port ${config.port}`);
 });
+
+module.exports = { app, server };
 
 // 优雅关闭
 process.on('SIGTERM', () => {

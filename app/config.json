@@ -1,6 +1,13 @@
 {
   "port": 3000,
   "adminKey": "admin",
+  "github": {
+    "token": "",
+    "apiCache": {
+      "enabled": true,
+      "duration": 300
+    }
+  },
   "cache": {
     "enabled": true,
     "duration": 86400
