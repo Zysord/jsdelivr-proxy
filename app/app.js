@@ -461,10 +461,18 @@ app.use(cacheMiddleware, async (req, res) => {
     // 解析请求类型和包名
     if (url.startsWith('/npm/')) {
         packageType = 'npm';
-        // 提取@符号或第一个/之前的包名
-        packageName = url.slice(5).split(/[@/]/)[0];
+        // 修正包名提取逻辑，支持 @scope/name
+        const npmPath = url.slice(5); // 去掉 /npm/
+        let pkg;
+        if (npmPath.startsWith('@')) {
+            // 形如 @scope/name/xxx
+            const parts = npmPath.split('/');
+            pkg = parts.length >= 2 ? `${parts[0]}/${parts[1]}` : npmPath;
+        } else {
+            pkg = npmPath.split('/')[0];
+        }
+        packageName = pkg;
         baseUrl = config.jsdelivr.npm_base;
-        // 保持原始路径，但移除开头的 /npm
         proxyUrl = baseUrl + url.slice(4);
     } else if (url.startsWith('/gh/')) {
         packageType = 'github';
