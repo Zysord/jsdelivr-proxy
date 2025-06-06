@@ -19,7 +19,8 @@
     "whitelist": {
       "npm": [
         "react",
-        "vue"
+        "vue",
+        "@fancyapps/fancybox"
       ],
       "github": [
         "vuejs/vue"
