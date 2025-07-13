@@ -461,17 +461,10 @@ app.use(cacheMiddleware, async (req, res) => {
     // 解析请求类型和包名
     if (url.startsWith('/npm/')) {
         packageType = 'npm';
-        // 修正包名提取逻辑，支持 @scope/name
+        // 使用正则提取包名，支持 @scope/name 和版本号
         const npmPath = url.slice(5); // 去掉 /npm/
-        let pkg;
-        if (npmPath.startsWith('@')) {
-            // 形如 @scope/name/xxx
-            const parts = npmPath.split('/');
-            pkg = parts.length >= 2 ? `${parts[0]}/${parts[1]}` : npmPath;
-        } else {
-            pkg = npmPath.split('/')[0];
-        }
-        packageName = pkg;
+        let pkgMatch = npmPath.match(/^(@[^/]+\/[^/@]+|[^/@]+)(?:@[^/]+)?/);
+        packageName = pkgMatch ? pkgMatch[1] : '';
         baseUrl = config.jsdelivr.npm_base;
         proxyUrl = baseUrl + url.slice(4);
     } else if (url.startsWith('/gh/')) {
